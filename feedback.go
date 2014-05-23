@@ -1,13 +1,13 @@
 package apns
 
 import (
-	"bytes"
-	"crypto/tls"
-	"encoding/binary"
-	"encoding/hex"
-	"errors"
-	"net"
-	"time"
+	// "bytes"
+	// "crypto/tls"
+	// "encoding/binary"
+	// "encoding/hex"
+	// "errors"
+	// "net"
+	// "time"
 )
 
 // Wait at most this many seconds for feedback data from Apple.
@@ -38,62 +38,62 @@ func NewFeedbackResponse() (resp *FeedbackResponse) {
 // Feedback consists of device tokens that should
 // not be sent to in the future; Apple *does* monitor that
 // you respect this so you should be checking it ;)
-func (client *Client) ListenForFeedback() (err error) {
-	var cert tls.Certificate
+// func (client *Client) ListenForFeedback() (err error) {
+// 	var cert tls.Certificate
 
-	if len(client.CertificateBase64) == 0 && len(client.KeyBase64) == 0 {
-		// The user did not specify raw block contents, so check the filesystem.
-		cert, err = tls.LoadX509KeyPair(client.CertificateFile, client.KeyFile)
-	} else {
-		// The user provided the raw block contents, so use that.
-		cert, err = tls.X509KeyPair([]byte(client.CertificateBase64), []byte(client.KeyBase64))
-	}
+// 	if len(client.CertificateBase64) == 0 && len(client.KeyBase64) == 0 {
+// 		// The user did not specify raw block contents, so check the filesystem.
+// 		cert, err = tls.LoadX509KeyPair(client.CertificateFile, client.KeyFile)
+// 	} else {
+// 		// The user provided the raw block contents, so use that.
+// 		cert, err = tls.X509KeyPair([]byte(client.CertificateBase64), []byte(client.KeyBase64))
+// 	}
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	conf := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
+// 	conf := &tls.Config{
+// 		Certificates: []tls.Certificate{cert},
+// 	}
 
-	conn, err := net.Dial("tcp", client.Gateway)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	conn.SetReadDeadline(time.Now().Add(FeedbackTimeoutSeconds * time.Second))
+// 	conn, err := net.Dial("tcp", client.Gateway)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer conn.Close()
+// 	conn.SetReadDeadline(time.Now().Add(FeedbackTimeoutSeconds * time.Second))
 
-	tlsConn := tls.Client(conn, conf)
-	err = tlsConn.Handshake()
-	if err != nil {
-		return err
-	}
+// 	tlsConn := tls.Client(conn, conf)
+// 	err = tlsConn.Handshake()
+// 	if err != nil {
+// 		return err
+// 	}
 
-	var tokenLength uint16
-	buffer := make([]byte, 38, 38)
-	deviceToken := make([]byte, 32, 32)
+// 	var tokenLength uint16
+// 	buffer := make([]byte, 38, 38)
+// 	deviceToken := make([]byte, 32, 32)
 
-	for {
-		_, err := tlsConn.Read(buffer)
-		if err != nil {
-			ShutdownChannel <- true
-			break
-		}
+// 	for {
+// 		_, err := tlsConn.Read(buffer)
+// 		if err != nil {
+// 			ShutdownChannel <- true
+// 			break
+// 		}
 
-		resp := NewFeedbackResponse()
+// 		resp := NewFeedbackResponse()
 
-		r := bytes.NewReader(buffer)
-		binary.Read(r, binary.BigEndian, &resp.Timestamp)
-		binary.Read(r, binary.BigEndian, &tokenLength)
-		binary.Read(r, binary.BigEndian, &deviceToken)
-		if tokenLength != 32 {
-			return errors.New("token length should be equal to 32, but isn't")
-		}
-		resp.DeviceToken = hex.EncodeToString(deviceToken)
+// 		r := bytes.NewReader(buffer)
+// 		binary.Read(r, binary.BigEndian, &resp.Timestamp)
+// 		binary.Read(r, binary.BigEndian, &tokenLength)
+// 		binary.Read(r, binary.BigEndian, &deviceToken)
+// 		if tokenLength != 32 {
+// 			return errors.New("token length should be equal to 32, but isn't")
+// 		}
+// 		resp.DeviceToken = hex.EncodeToString(deviceToken)
 
-		FeedbackChannel <- resp
-	}
+// 		FeedbackChannel <- resp
+// 	}
 
-	return nil
-}
+// 	return nil
+// }

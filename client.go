@@ -1,10 +1,10 @@
 package apns
 
 import (
-	"crypto/tls"
-	"errors"
-	"net"
-	"time"
+	// "crypto/tls"
+	// "errors"
+	// "net"
+	// "time"
 )
 
 // Client contains the fields necessary to communicate
@@ -47,28 +47,28 @@ func NewClient(gateway, certificateFile, keyFile string) (c *Client) {
 
 // Send connects to the APN service and sends your push notification.
 // Remember that if the submission is successful, Apple won't reply.
-func (client *Client) Send(pn *PushNotification) (resp *PushNotificationResponse) {
-	resp = new(PushNotificationResponse)
+// func (client *Client) Send(pn *PushNotification) (resp *PushNotificationResponse) {
+// 	resp = new(PushNotificationResponse)
 
-	payload, err := pn.ToBytes()
-	if err != nil {
-		resp.Success = false
-		resp.Error = err
-		return
-	}
+// 	payload, err := pn.ToBytes()
+// 	if err != nil {
+// 		resp.Success = false
+// 		resp.Error = err
+// 		return
+// 	}
 
-	err = client.ConnectAndWrite(resp, payload)
-	if err != nil {
-		resp.Success = false
-		resp.Error = err
-		return
-	}
+// 	err = client.ConnectAndWrite(resp, payload)
+// 	if err != nil {
+// 		resp.Success = false
+// 		resp.Error = err
+// 		return
+// 	}
 
-	resp.Success = true
-	resp.Error = nil
+// 	resp.Success = true
+// 	resp.Error = nil
 
-	return
-}
+// 	return
+// }
 
 // ConnectAndWrite establishes the connection to Apple and handles the
 // transmission of your push notification, as well as waiting for a reply.
@@ -81,76 +81,76 @@ func (client *Client) Send(pn *PushNotification) (resp *PushNotificationResponse
 // Whichever channel puts data on first is the "winner". As such, it's
 // possible to get a false positive if Apple takes a long time to respond.
 // It's probably not a deal-breaker, but something to be aware of.
-func (client *Client) ConnectAndWrite(resp *PushNotificationResponse, payload []byte) (err error) {
-	var cert tls.Certificate
+// func (client *Client) ConnectAndWrite(resp *PushNotificationResponse, payload []byte) (err error) {
+// 	var cert tls.Certificate
 
-	if len(client.CertificateBase64) == 0 && len(client.KeyBase64) == 0 {
-		// The user did not specify raw block contents, so check the filesystem.
-		cert, err = tls.LoadX509KeyPair(client.CertificateFile, client.KeyFile)
-	} else {
-		// The user provided the raw block contents, so use that.
-		cert, err = tls.X509KeyPair([]byte(client.CertificateBase64), []byte(client.KeyBase64))
-	}
+// 	if len(client.CertificateBase64) == 0 && len(client.KeyBase64) == 0 {
+// 		// The user did not specify raw block contents, so check the filesystem.
+// 		cert, err = tls.LoadX509KeyPair(client.CertificateFile, client.KeyFile)
+// 	} else {
+// 		// The user provided the raw block contents, so use that.
+// 		cert, err = tls.X509KeyPair([]byte(client.CertificateBase64), []byte(client.KeyBase64))
+// 	}
 
-	if err != nil {
-		return err
-	}
+// 	if err != nil {
+// 		return err
+// 	}
 
-	conf := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-	}
+// 	conf := &tls.Config{
+// 		Certificates: []tls.Certificate{cert},
+// 	}
 
-	conn, err := net.Dial("tcp", client.Gateway)
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
+// 	conn, err := net.Dial("tcp", client.Gateway)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer conn.Close()
 
-	tlsConn := tls.Client(conn, conf)
-	err = tlsConn.Handshake()
-	if err != nil {
-		return err
-	}
-	defer tlsConn.Close()
+// 	tlsConn := tls.Client(conn, conf)
+// 	err = tlsConn.Handshake()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer tlsConn.Close()
 
-	_, err = tlsConn.Write(payload)
-	if err != nil {
-		return err
-	}
+// 	_, err = tlsConn.Write(payload)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	// Create one channel that will serve to handle
-	// timeouts when the notification succeeds.
-	timeoutChannel := make(chan bool, 1)
-	go func() {
-		time.Sleep(time.Second * TimeoutSeconds)
-		timeoutChannel <- true
-	}()
+// 	// Create one channel that will serve to handle
+// 	// timeouts when the notification succeeds.
+// 	timeoutChannel := make(chan bool, 1)
+// 	go func() {
+// 		time.Sleep(time.Second * TimeoutSeconds)
+// 		timeoutChannel <- true
+// 	}()
 
-	// This channel will contain the binary response
-	// from Apple in the event of a failure.
-	responseChannel := make(chan []byte, 1)
-	go func() {
-		buffer := make([]byte, 6, 6)
-		tlsConn.Read(buffer)
-		responseChannel <- buffer
-	}()
+// 	// This channel will contain the binary response
+// 	// from Apple in the event of a failure.
+// 	responseChannel := make(chan []byte, 1)
+// 	go func() {
+// 		buffer := make([]byte, 6, 6)
+// 		tlsConn.Read(buffer)
+// 		responseChannel <- buffer
+// 	}()
 
-	// First one back wins!
-	// The data structure for an APN response is as follows:
-	//
-	// command    -> 1 byte
-	// status     -> 1 byte
-	// identifier -> 4 bytes
-	//
-	// The first byte will always be set to 8.
-	select {
-	case r := <-responseChannel:
-		resp.Success = false
-		resp.AppleResponse = ApplePushResponses[r[1]]
-		err = errors.New(resp.AppleResponse)
-	case <-timeoutChannel:
-		resp.Success = true
-	}
+// 	// First one back wins!
+// 	// The data structure for an APN response is as follows:
+// 	//
+// 	// command    -> 1 byte
+// 	// status     -> 1 byte
+// 	// identifier -> 4 bytes
+// 	//
+// 	// The first byte will always be set to 8.
+// 	select {
+// 	case r := <-responseChannel:
+// 		resp.Success = false
+// 		resp.AppleResponse = ApplePushResponses[r[1]]
+// 		err = errors.New(resp.AppleResponse)
+// 	case <-timeoutChannel:
+// 		resp.Success = true
+// 	}
 
-	return err
-}
+// 	return err
+// }
